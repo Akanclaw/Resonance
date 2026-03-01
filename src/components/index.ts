@@ -10,3 +10,4 @@ export { NoteLengthSelector } from './NoteLengthSelector';
 export { OctaveShift } from './OctaveShift';
 export { VelocitySlider } from './VelocitySlider';
 export { Metronome } from './Metronome';
+export { GridSelector } from './GridSelector';
