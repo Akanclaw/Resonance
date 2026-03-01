@@ -17,3 +17,4 @@ export { ZoomControls } from './ZoomControls';
 export { AboutDialog } from './AboutDialog';
 export { PlaybackRate } from './PlaybackRate';
 export { TimeSignature } from './TimeSignature';
+export { PianoKeyboard } from './PianoKeyboard';
