@@ -4,3 +4,4 @@ export { PianoRoll } from './PianoRoll';
 export { NoteProperties } from './NoteProperties';
 export { Timeline } from './Timeline';
 export { Presets } from './Presets';
+export { StatusBar } from './StatusBar';

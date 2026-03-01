@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Toolbar, TrackList, PianoRoll, NoteProperties, Timeline } from "./components";
+import { Toolbar, TrackList, PianoRoll, NoteProperties, Timeline, StatusBar } from "./components";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import "./App.css";
 
@@ -25,10 +25,7 @@ function App() {
         <PianoRoll />
         <NoteProperties />
       </div>
-      <div className="flex items-center justify-between px-4 py-1 bg-gray-800 border-t border-gray-700 text-xs text-gray-400">
-        <span>Space: Play | Del: Delete | Esc: Clear | Ctrl+Z: Undo | Ctrl+Shift+Z: Redo | Ctrl+Wheel: Zoom</span>
-        <span>© 2026 Resonance Team</span>
-      </div>
+      <StatusBar />
     </div>
   );
 }
