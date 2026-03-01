@@ -11,6 +11,7 @@ import { Metronome } from './Metronome';
 import { GridSelector } from './GridSelector';
 import { TransposeTool } from './TransposeTool';
 import { TrackControls } from './TrackControls';
+import { ZoomControls } from './ZoomControls';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -74,6 +75,7 @@ export function Toolbar() {
       <GridSelector />
       <TransposeTool />
       <TrackControls />
+      <ZoomControls />
       <div className="flex-1" />
       <span className="text-gray-400 text-sm">{project.name}</span>
     </div>
