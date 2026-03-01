@@ -4,6 +4,7 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { useProjectStore } from '../store/projectStore';
 import { Presets } from './Presets';
 import { QuantizeSelector } from './QuantizeSelector';
+import { NoteLengthSelector } from './NoteLengthSelector';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -12,65 +13,33 @@ export function Toolbar() {
   const handlePlay = async () => {
     try {
       setLoading(true);
-      if (isPlaying) {
-        await invoke('stop_audio');
-      } else {
-        await invoke('play_audio');
-      }
+      if (isPlaying) { await invoke('stop_audio'); } 
+      else { await invoke('play_audio'); }
       setPlaying(!isPlaying);
-    } catch (e) {
-      console.error('Playback error:', e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error('Playback error:', e); }
+    finally { setLoading(false); }
   };
   
   const handleStop = async () => {
-    try {
-      await invoke('stop_audio');
-      setPlaying(false);
-    } catch (e) {
-      console.error('Stop error:', e);
-    }
+    try { await invoke('stop_audio'); setPlaying(false); }
+    catch (e) { console.error('Stop error:', e); }
   };
   
   const handleImportMidi = async () => {
     try {
-      const selected = await open({
-        multiple: false,
-        filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }]
-      });
-      if (selected) {
-        const proj = await invoke('import_midi', { path: selected });
-        setProject(proj as any);
-      }
-    } catch (e) {
-      console.error('Import error:', e);
-    }
+      const selected = await open({ multiple: false, filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }] });
+      if (selected) { const proj = await invoke('import_midi', { path: selected }); setProject(proj as any); }
+    } catch (e) { console.error('Import error:', e); }
   };
   
   const handleExportMidi = async () => {
     try {
-      const path = await save({
-        filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }],
-        defaultPath: `${project.name}.mid`
-      });
+      const path = await save({ filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }], defaultPath: `${project.name}.mid` });
       if (path) {
-        const ustxProject = {
-          name: project.name,
-          bpm: project.bpm,
-          beatPerBar: project.beatPerBar,
-          beatUnit: project.beatUnit,
-          tempo: project.tempo,
-          tracks: project.tracks,
-          project: { voiceDir: null, singer: null, expressions: {} },
-          Version: 'Resonance'
-        };
+        const ustxProject = { name: project.name, bpm: project.bpm, beatPerBar: project.beatPerBar, beatUnit: project.beatUnit, tempo: project.tempo, tracks: project.tracks, project: { voiceDir: null, singer: null, expressions: {} }, Version: 'Resonance' };
         await invoke('export_midi', { path, project: ustxProject });
       }
-    } catch (e) {
-      console.error('Export error:', e);
-    }
+    } catch (e) { console.error('Export error:', e); }
   };
   
   return (
@@ -79,29 +48,20 @@ export function Toolbar() {
         <button onClick={undo} disabled={!canUndo()} className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm">↩</button>
         <button onClick={redo} disabled={!canRedo()} className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm">↪</button>
       </div>
-      
       <div className="h-6 w-px bg-gray-600 mx-1" />
-      
       <button onClick={handleImportMidi} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">Import</button>
       <button onClick={handleExportMidi} className="px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white text-sm">Export</button>
-      
       <div className="h-6 w-px bg-gray-600 mx-1" />
-      
-      <button onClick={handlePlay} disabled={loading} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded text-white text-sm">
-        {isPlaying ? '⏹ Stop' : '▶ Play'}
-      </button>
+      <button onClick={handlePlay} disabled={loading} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded text-white text-sm">{isPlaying ? '⏹ Stop' : '▶ Play'}</button>
       <button onClick={handleStop} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">⏹</button>
-      
       <div className="h-6 w-px bg-gray-600 mx-2" />
-      
       <div className="flex items-center gap-2">
         <span className="text-gray-400 text-sm">BPM:</span>
         <input type="number" value={project.bpm} className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm" readOnly />
       </div>
-      
       <Presets />
       <QuantizeSelector />
-      
+      <NoteLengthSelector />
       <div className="flex-1" />
       <span className="text-gray-400 text-sm">{project.name}</span>
     </div>
