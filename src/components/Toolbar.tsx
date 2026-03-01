@@ -33,6 +33,7 @@ import { ExportMenu } from './ExportMenu';
 import { UserPreset } from './UserPreset';
 import { AutomationLane } from './AutomationLane';
 import { LyricEditor } from './LyricEditor';
+import { VocalMode } from './VocalMode';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -117,6 +118,7 @@ export function Toolbar() {
       <UserPreset />
       <AutomationLane />
       <LyricEditor />
+      <VocalMode />
       <button 
         onClick={() => document.getElementById('about-dialog')?.classList.toggle('hidden')}
         className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm ml-4"
