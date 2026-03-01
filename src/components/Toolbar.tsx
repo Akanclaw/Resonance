@@ -25,6 +25,7 @@ import { MarkerList } from './MarkerList';
 import { EffectRack } from './EffectRack';
 import { Mixer } from './Mixer';
 import { MasterVolume } from './MasterVolume';
+import { PianoMode } from './PianoMode';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -101,6 +102,7 @@ export function Toolbar() {
       <EffectRack />
       <Mixer />
       <MasterVolume />
+      <PianoMode />
       <button 
         onClick={() => document.getElementById('about-dialog')?.classList.toggle('hidden')}
         className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm ml-4"
