@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Toolbar, TrackList, PianoRoll } from "./components";
+import { Toolbar, TrackList, PianoRoll, NoteProperties } from "./components";
 import "./App.css";
 
 function App() {
@@ -19,6 +19,7 @@ function App() {
       <div className="flex-1 flex overflow-hidden">
         <TrackList />
         <PianoRoll />
+        <NoteProperties />
       </div>
       <div className="flex items-center justify-between px-4 py-1 bg-gray-800 border-t border-gray-700 text-xs text-gray-400">
         <span>Ready</span>
