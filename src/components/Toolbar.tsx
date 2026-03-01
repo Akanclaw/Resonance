@@ -30,6 +30,7 @@ import { ColorPicker } from './ColorPicker';
 import { ThemeToggle } from './ThemeToggle';
 import { MIDILearn } from './MIDILearn';
 import { ExportMenu } from './ExportMenu';
+import { UserPreset } from './UserPreset';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -111,6 +112,7 @@ export function Toolbar() {
       <ThemeToggle />
       <MIDILearn />
       <ExportMenu />
+      <UserPreset />
       <button 
         onClick={() => document.getElementById('about-dialog')?.classList.toggle('hidden')}
         className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm ml-4"
