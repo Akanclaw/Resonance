@@ -9,6 +9,7 @@ import { OctaveShift } from './OctaveShift';
 import { VelocitySlider } from './VelocitySlider';
 import { Metronome } from './Metronome';
 import { GridSelector } from './GridSelector';
+import { TransposeTool } from './TransposeTool';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -70,6 +71,7 @@ export function Toolbar() {
       <VelocitySlider />
       <Metronome />
       <GridSelector />
+      <TransposeTool />
       <div className="flex-1" />
       <span className="text-gray-400 text-sm">{project.name}</span>
     </div>
