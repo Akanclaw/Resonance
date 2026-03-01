@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Toolbar, TrackList, PianoRoll, NoteProperties } from "./components";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import "./App.css";
 
 function App() {
@@ -9,6 +10,9 @@ function App() {
   useEffect(() => {
     invoke<string>("get_version").then(setVersion).catch(console.error);
   }, []);
+  
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
   
   return (
     <div className="h-screen flex flex-col bg-gray-900 text-white">
@@ -22,7 +26,7 @@ function App() {
         <NoteProperties />
       </div>
       <div className="flex items-center justify-between px-4 py-1 bg-gray-800 border-t border-gray-700 text-xs text-gray-400">
-        <span>Ready</span>
+        <span>Ready | Space: Play/Stop | Del: Delete | Esc: Clear</span>
         <span>© 2026 Resonance Team</span>
       </div>
     </div>
