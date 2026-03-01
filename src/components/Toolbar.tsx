@@ -4,7 +4,7 @@ import { useProjectStore } from '../store/projectStore';
 import { Presets } from './Presets';
 
 export function Toolbar() {
-  const { isPlaying, setPlaying, project } = useProjectStore();
+  const { isPlaying, setPlaying, project, undo, redo, canUndo, canRedo } = useProjectStore();
   const [loading, setLoading] = useState(false);
   
   const handlePlay = async () => {
@@ -34,6 +34,27 @@ export function Toolbar() {
   
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700">
+      <div className="flex items-center gap-1">
+        <button
+          onClick={undo}
+          disabled={!canUndo()}
+          className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm"
+          title="Ctrl+Z"
+        >
+          ↩
+        </button>
+        <button
+          onClick={redo}
+          disabled={!canRedo()}
+          className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm"
+          title="Ctrl+Shift+Z"
+        >
+          ↪
+        </button>
+      </div>
+      
+      <div className="h-6 w-px bg-gray-600 mx-1" />
+      
       <div className="flex items-center gap-1">
         <button
           onClick={handlePlay}

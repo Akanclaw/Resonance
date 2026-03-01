@@ -26,7 +26,7 @@ function App() {
         <NoteProperties />
       </div>
       <div className="flex items-center justify-between px-4 py-1 bg-gray-800 border-t border-gray-700 text-xs text-gray-400">
-        <span>Space: Play/Stop | Del: Delete | Esc: Clear</span>
+        <span>Space: Play | Del: Delete | Esc: Clear | Ctrl+Z: Undo | Ctrl+Shift+Z: Redo | Ctrl+Wheel: Zoom</span>
         <span>© 2026 Resonance Team</span>
       </div>
     </div>
