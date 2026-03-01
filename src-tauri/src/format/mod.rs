@@ -5,6 +5,7 @@
 pub mod ustx;
 pub mod ust;
 pub mod io;
+pub mod midi_io;
 
 pub use ustx::UstxFile;
 pub use ust::UstFile;

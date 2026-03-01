@@ -106,7 +106,9 @@ pub fn run() {
             format::io::load_ustx_file,
             format::io::save_ustx_file,
             format::io::create_new_project,
-            format::io::get_default
+            format::io::get_default,
+            format::midi_io::import_midi,
+            format::midi_io::export_midi
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
