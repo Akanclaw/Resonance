@@ -39,6 +39,7 @@ import { SnapOptions } from './SnapOptions';
 import { VelocityCurve } from './VelocityCurve';
 import { QuantizeStrength } from './QuantizeStrength';
 import { TimeStretch } from './TimeStretch';
+import { PianoRange } from './PianoRange';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -129,6 +130,7 @@ export function Toolbar() {
       <VelocityCurve />
       <QuantizeStrength />
       <TimeStretch />
+      <PianoRange />
       <button 
         onClick={() => document.getElementById('about-dialog')?.classList.toggle('hidden')}
         className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm ml-4"
