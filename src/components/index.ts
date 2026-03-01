@@ -14,3 +14,4 @@ export { GridSelector } from './GridSelector';
 export { TransposeTool } from './TransposeTool';
 export { TrackControls } from './TrackControls';
 export { ZoomControls } from './ZoomControls';
+export { AboutDialog } from './AboutDialog';
