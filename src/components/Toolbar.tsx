@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { useProjectStore } from '../store/projectStore';
 import { Presets } from './Presets';
+import { QuantizeSelector } from './QuantizeSelector';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -39,7 +40,6 @@ export function Toolbar() {
         multiple: false,
         filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }]
       });
-      
       if (selected) {
         const proj = await invoke('import_midi', { path: selected });
         setProject(proj as any);
@@ -55,7 +55,6 @@ export function Toolbar() {
         filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }],
         defaultPath: `${project.name}.mid`
       });
-      
       if (path) {
         const ustxProject = {
           name: project.name,
@@ -77,70 +76,31 @@ export function Toolbar() {
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 border-b border-gray-700">
       <div className="flex items-center gap-1">
-        <button
-          onClick={undo}
-          disabled={!canUndo()}
-          className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm"
-        >
-          ↩
-        </button>
-        <button
-          onClick={redo}
-          disabled={!canRedo()}
-          className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm"
-        >
-          ↪
-        </button>
+        <button onClick={undo} disabled={!canUndo()} className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm">↩</button>
+        <button onClick={redo} disabled={!canRedo()} className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm">↪</button>
       </div>
       
       <div className="h-6 w-px bg-gray-600 mx-1" />
       
-      <button
-        onClick={handleImportMidi}
-        className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
-      >
-        Import
-      </button>
-      
-      <button
-        onClick={handleExportMidi}
-        className="px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
-      >
-        Export
-      </button>
+      <button onClick={handleImportMidi} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">Import</button>
+      <button onClick={handleExportMidi} className="px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white text-sm">Export</button>
       
       <div className="h-6 w-px bg-gray-600 mx-1" />
       
-      <div className="flex items-center gap-1">
-        <button
-          onClick={handlePlay}
-          disabled={loading}
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded text-white text-sm"
-        >
-          {isPlaying ? '⏹ Stop' : '▶ Play'}
-        </button>
-        
-        <button
-          onClick={handleStop}
-          className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
-        >
-          ⏹
-        </button>
-      </div>
+      <button onClick={handlePlay} disabled={loading} className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded text-white text-sm">
+        {isPlaying ? '⏹ Stop' : '▶ Play'}
+      </button>
+      <button onClick={handleStop} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm">⏹</button>
       
       <div className="h-6 w-px bg-gray-600 mx-2" />
       
       <div className="flex items-center gap-2">
         <span className="text-gray-400 text-sm">BPM:</span>
-        <input
-          type="number"
-          value={project.bpm}
-          className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm"
-          readOnly
-        />
+        <input type="number" value={project.bpm} className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm" readOnly />
       </div>
       
       <Presets />
+      <QuantizeSelector />
       
       <div className="flex-1" />
       <span className="text-gray-400 text-sm">{project.name}</span>
