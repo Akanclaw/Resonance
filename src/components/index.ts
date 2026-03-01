@@ -33,3 +33,4 @@ export { ThemeToggle } from './ThemeToggle';
 export { MIDILearn } from './MIDILearn';
 export { ExportMenu } from './ExportMenu';
 export { UserPreset } from './UserPreset';
+export { AutomationLane } from './AutomationLane';
