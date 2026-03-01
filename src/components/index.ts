@@ -28,3 +28,4 @@ export { EffectRack } from './EffectRack';
 export { Mixer } from './Mixer';
 export { MasterVolume } from './MasterVolume';
 export { PianoMode } from './PianoMode';
+export { ColorPicker } from './ColorPicker';
