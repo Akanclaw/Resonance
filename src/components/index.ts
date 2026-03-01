@@ -7,3 +7,4 @@ export { Presets } from './Presets';
 export { StatusBar } from './StatusBar';
 export { QuantizeSelector } from './QuantizeSelector';
 export { NoteLengthSelector } from './NoteLengthSelector';
+export { OctaveShift } from './OctaveShift';

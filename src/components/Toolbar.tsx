@@ -5,6 +5,7 @@ import { useProjectStore } from '../store/projectStore';
 import { Presets } from './Presets';
 import { QuantizeSelector } from './QuantizeSelector';
 import { NoteLengthSelector } from './NoteLengthSelector';
+import { OctaveShift } from './OctaveShift';
 
 export function Toolbar() {
   const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
@@ -62,6 +63,7 @@ export function Toolbar() {
       <Presets />
       <QuantizeSelector />
       <NoteLengthSelector />
+      <OctaveShift />
       <div className="flex-1" />
       <span className="text-gray-400 text-sm">{project.name}</span>
     </div>
