@@ -30,3 +30,4 @@ export { MasterVolume } from './MasterVolume';
 export { PianoMode } from './PianoMode';
 export { ColorPicker } from './ColorPicker';
 export { ThemeToggle } from './ThemeToggle';
+export { MIDILearn } from './MIDILearn';
