@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
+import { open, save } from '@tauri-apps/plugin-dialog';
 import { useProjectStore } from '../store/projectStore';
 import { Presets } from './Presets';
 
 export function Toolbar() {
-  const { isPlaying, setPlaying, project, undo, redo, canUndo, canRedo } = useProjectStore();
+  const { isPlaying, setPlaying, project, setProject, undo, redo, canUndo, canRedo } = useProjectStore();
   const [loading, setLoading] = useState(false);
   
   const handlePlay = async () => {
@@ -33,6 +33,22 @@ export function Toolbar() {
     }
   };
   
+  const handleImportMidi = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: 'MIDI', extensions: ['mid', 'midi'] }]
+      });
+      
+      if (selected) {
+        const proj = await invoke('import_midi', { path: selected });
+        setProject(proj as any);
+      }
+    } catch (e) {
+      console.error('Import error:', e);
+    }
+  };
+  
   const handleExportMidi = async () => {
     try {
       const path = await save({
@@ -41,7 +57,6 @@ export function Toolbar() {
       });
       
       if (path) {
-        // Convert project to USTX format for export
         const ustxProject = {
           name: project.name,
           bpm: project.bpm,
@@ -49,11 +64,7 @@ export function Toolbar() {
           beatUnit: project.beatUnit,
           tempo: project.tempo,
           tracks: project.tracks,
-          project: {
-            voiceDir: null,
-            singer: null,
-            expressions: {}
-          },
+          project: { voiceDir: null, singer: null, expressions: {} },
           Version: 'Resonance'
         };
         await invoke('export_midi', { path, project: ustxProject });
@@ -70,7 +81,6 @@ export function Toolbar() {
           onClick={undo}
           disabled={!canUndo()}
           className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm"
-          title="Ctrl+Z"
         >
           ↩
         </button>
@@ -78,11 +88,26 @@ export function Toolbar() {
           onClick={redo}
           disabled={!canRedo()}
           className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 rounded text-white text-sm"
-          title="Ctrl+Shift+Z"
         >
           ↪
         </button>
       </div>
+      
+      <div className="h-6 w-px bg-gray-600 mx-1" />
+      
+      <button
+        onClick={handleImportMidi}
+        className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-white text-sm"
+      >
+        Import
+      </button>
+      
+      <button
+        onClick={handleExportMidi}
+        className="px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
+      >
+        Export
+      </button>
       
       <div className="h-6 w-px bg-gray-600 mx-1" />
       
@@ -104,13 +129,6 @@ export function Toolbar() {
       </div>
       
       <div className="h-6 w-px bg-gray-600 mx-2" />
-      
-      <button
-        onClick={handleExportMidi}
-        className="px-3 py-1.5 bg-green-700 hover:bg-green-600 rounded text-white text-sm"
-      >
-        Export MIDI
-      </button>
       
       <div className="flex items-center gap-2">
         <span className="text-gray-400 text-sm">BPM:</span>
