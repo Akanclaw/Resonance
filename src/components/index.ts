@@ -31,3 +31,4 @@ export { PianoMode } from './PianoMode';
 export { ColorPicker } from './ColorPicker';
 export { ThemeToggle } from './ThemeToggle';
 export { MIDILearn } from './MIDILearn';
+export { ExportMenu } from './ExportMenu';
