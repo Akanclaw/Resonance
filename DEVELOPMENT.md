@@ -55,13 +55,17 @@ https://github.com/Akanclaw/Resonance
 - [x] Resampler trait 定义
 - [x] 内置 Sine/Triangle/Sawtooth resampler
 - [x] WORLDLINE placeholder
-- [ ] 外部 resampler 支持
+- [x] 外部 resampler 支持
 
 ### Phase 7: Phonemizer 插件
 - [x] 插件系统架构
 - [x] 内置 JapanesePhonemizer (带假名词典)
 - [x] 内置 EnglishArpabetPhonemizer (带英语词典)
 - [x] PhonemizerManager 管理器
+
+### Phase 8: CI/CD & 发布
+- [x] GitHub Actions CI 配置
+- [x] GitHub Actions Release 配置
 
 ---
 
@@ -75,6 +79,9 @@ https://github.com/Akanclaw/Resonance
 - ✅ 修复 Tauri 命令参数
 - ✅ 修复 TypeScript 前端构建
 - ✅ 前端编译成功
+- ✅ 添加 AudioPlayer 组件 (Web Audio API)
+- ✅ 添加 TransportBar 播放控制
+- ✅ 配置 GitHub Actions CI/CD
 
 ### 2026-03-01
 - ✅ 初始化项目，Tauri + React + TypeScript 骨架搭建
