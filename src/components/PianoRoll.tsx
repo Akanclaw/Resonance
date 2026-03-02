@@ -9,12 +9,15 @@ const HEADER_HEIGHT = 24;
 const PIANO_KEY_WIDTH = 40;
 
 interface DragState {
-  type: 'move' | 'resize-left' | 'resize-right' | null;
+  type: 'move' | 'resize-left' | 'resize-right' | 'velocity' | null;
   noteIndex: number;
   startX: number;
+  startY: number;
   startTick: number;
+  startPitch: number;
   originalStart: number;
   originalDuration: number;
+  originalVelocity: number;
 }
 
 export function PianoRoll() {
@@ -27,37 +30,81 @@ export function PianoRoll() {
     addNote, 
     clearSelection,
     updateNote,
+    deleteNote,
     currentTick,
-    isPlaying 
+    isPlaying
   } = useProjectStore();
   const track = project.tracks[currentTrackIndex];
   const [scrollX, setScrollX] = useState(0);
   const [scrollY, setScrollY] = useState(0);
   const [tickWidth, setTickWidth] = useState(0.5);
+  const [snapEnabled, setSnapEnabled] = useState(true);
   const [dragState, setDragState] = useState<DragState>({
     type: null,
     noteIndex: -1,
     startX: 0,
+    startY: 0,
     startTick: 0,
+    startPitch: 0,
     originalStart: 0,
-    originalDuration: 0
+    originalDuration: 0,
+    originalVelocity: 100
   });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [copiedNotes, setCopiedNotes] = useState<{pitch: number; velocity: number; start: number; duration: number}[]>([]);
 
   // Calculate total width and height
   const totalTicks = Math.max(4000, ...track.notes.map(n => n.start + n.duration));
   const totalHeight = (MAX_PITCH - MIN_PITCH + 1) * NOTE_HEIGHT + HEADER_HEIGHT;
 
-  // Load project info from backend
-  useEffect(() => {
-    invoke('get_project_info')
-      .then((info) => {
-        console.log('Project info:', info);
-      })
-      .catch((err) => {
-        console.log('Backend not ready or error:', err);
-      });
-  }, []);
+  // Snap to grid
+  const snapToGrid = useCallback((tick: number) => {
+    if (!snapEnabled) return tick;
+    const snapTicks = 120; // 16th note
+    return Math.round(tick / snapTicks) * snapTicks;
+  }, [snapEnabled]);
+
+  // Convert position to grid coordinates
+  const getGridPosition = useCallback((clientX: number, clientY: number) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    
+    if (y < HEADER_HEIGHT) return null;
+    
+    const pitch = MAX_PITCH - Math.floor((y - HEADER_HEIGHT) / NOTE_HEIGHT);
+    const tick = Math.round((x - PIANO_KEY_WIDTH + scrollX) / tickWidth);
+    
+    if (pitch < MIN_PITCH || pitch > MAX_PITCH || tick < 0) return null;
+    
+    return { pitch, tick };
+  }, [scrollX, tickWidth]);
+
+  // Find note at position
+  const getNoteAtPosition = useCallback((x: number, y: number): { noteIndex: number; type: 'move' | 'resize-left' | 'resize-right' | 'velocity' } | null => {
+    const gridPos = getGridPosition(x, y);
+    if (!gridPos) return null;
+    
+    for (let i = track.notes.length - 1; i >= 0; i--) {
+      const note = track.notes[i];
+      const noteX = PIANO_KEY_WIDTH + note.start * tickWidth - scrollX;
+      const noteW = note.duration * tickWidth;
+      
+      if (gridPos.tick >= note.start && gridPos.tick < note.start + note.duration &&
+          gridPos.pitch === note.pitch) {
+        const relX = x - noteX;
+        if (relX < 8) {
+          return { noteIndex: i, type: 'resize-left' };
+        } else if (relX > noteW - 8) {
+          return { noteIndex: i, type: 'resize-right' };
+        }
+        return { noteIndex: i, type: 'move' };
+      }
+    }
+    return null;
+  }, [track.notes, scrollX, tickWidth, getGridPosition]);
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -72,7 +119,6 @@ export function PianoRoll() {
     ctx.fillStyle = '#1e1e1e';
     ctx.fillRect(0, 0, width, height);
     
-    // Pitch lines and piano keys
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const blackNotes = [1, 3, 6, 8, 10];
     
@@ -85,11 +131,9 @@ export function PianoRoll() {
       const noteInPitch = p % 12;
       const isBlack = blackNotes.includes(noteInPitch);
       
-      // Grid row background
       ctx.fillStyle = isBlack ? '#2a2a2a' : '#252525';
       ctx.fillRect(PIANO_KEY_WIDTH, y, width - PIANO_KEY_WIDTH, NOTE_HEIGHT);
       
-      // Piano key label
       ctx.fillStyle = isBlack ? '#3a3a3a' : '#2a2a2a';
       ctx.fillRect(0, y, PIANO_KEY_WIDTH, NOTE_HEIGHT);
       
@@ -127,7 +171,6 @@ export function PianoRoll() {
         ctx.lineTo(playheadX, height);
         ctx.stroke();
         
-        // Playhead triangle
         ctx.fillStyle = '#ef4444';
         ctx.beginPath();
         ctx.moveTo(playheadX - 6, 0);
@@ -149,36 +192,42 @@ export function PianoRoll() {
       const isSelected = selectedNotes.includes(i);
       const color = track.color || '#3b82f6';
       
-      // Note body
+      // Velocity-based brightness
+      const velocityFactor = 0.5 + (note.velocity / 127) * 0.5;
       ctx.fillStyle = isSelected ? '#60a5fa' : color;
+      ctx.globalAlpha = velocityFactor;
       ctx.beginPath();
       const noteX = Math.max(PIANO_KEY_WIDTH + 1, x);
       const noteW = Math.min(w - 2, width - noteX - 2);
       ctx.roundRect(noteX + 1, y + 1, noteW - 2, NOTE_HEIGHT - 2, 2);
       ctx.fill();
+      ctx.globalAlpha = 1;
       
-      // Selection border
       if (isSelected) {
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
         ctx.stroke();
         
-        // Resize handles
         ctx.fillStyle = '#fff';
-        // Left handle
         if (x >= PIANO_KEY_WIDTH) {
           ctx.fillRect(x + 2, y + 2, 4, NOTE_HEIGHT - 4);
         }
-        // Right handle
         if (x + w <= width) {
           ctx.fillRect(x + w - 6, y + 2, 4, NOTE_HEIGHT - 4);
         }
+      }
+      
+      // Velocity indicator bar at bottom of note
+      if (!isSelected) {
+        const velHeight = Math.max(2, (note.velocity / 127) * NOTE_HEIGHT * 0.3);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.fillRect(noteX + 1, y + NOTE_HEIGHT - velHeight - 1, noteW - 2, velHeight);
       }
     });
     
     // Current mouse position highlight
     const mouseY = mousePos.y;
-    if (mouseY >= HEADER_HEIGHT) {
+    if (mouseY >= HEADER_HEIGHT && mouseY < height) {
       const hoverPitch = MAX_PITCH - Math.floor((mouseY - HEADER_HEIGHT) / NOTE_HEIGHT);
       if (hoverPitch >= MIN_PITCH && hoverPitch <= MAX_PITCH) {
         const rowY = HEADER_HEIGHT + (MAX_PITCH - hoverPitch) * NOTE_HEIGHT;
@@ -186,55 +235,11 @@ export function PianoRoll() {
         ctx.fillRect(PIANO_KEY_WIDTH, rowY, width - PIANO_KEY_WIDTH, NOTE_HEIGHT);
       }
     }
-  }, [track, selectedNotes, scrollX, scrollY, tickWidth, project.beatPerBar, currentTick, isPlaying, mousePos, totalTicks]);
+  }, [track, selectedNotes, scrollX, tickWidth, project.beatPerBar, currentTick, isPlaying, mousePos, totalTicks]);
   
   useEffect(() => {
     render();
   }, [render]);
-
-  // Convert mouse position to grid position
-  const getGridPosition = useCallback((clientX: number, clientY: number) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return null;
-    
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    
-    if (y < HEADER_HEIGHT) return null;
-    
-    const pitch = MAX_PITCH - Math.floor((y - HEADER_HEIGHT) / NOTE_HEIGHT);
-    const tick = Math.round((x - PIANO_KEY_WIDTH + scrollX) / tickWidth);
-    
-    if (pitch < MIN_PITCH || pitch > MAX_PITCH || tick < 0) return null;
-    
-    return { pitch, tick };
-  }, [scrollX, tickWidth]);
-
-  // Find note at position with drag type
-  const getNoteAtPosition = useCallback((x: number, y: number): { noteIndex: number; type: 'move' | 'resize-left' | 'resize-right' } | null => {
-    const gridPos = getGridPosition(x, y);
-    if (!gridPos) return null;
-    
-    for (let i = track.notes.length - 1; i >= 0; i--) {
-      const note = track.notes[i];
-      const noteX = PIANO_KEY_WIDTH + note.start * tickWidth - scrollX;
-      const noteW = note.duration * tickWidth;
-      
-      // Check if in note area
-      if (gridPos.tick >= note.start && gridPos.tick < note.start + note.duration &&
-          gridPos.pitch === note.pitch) {
-        // Determine drag type based on position within note
-        const relX = x - noteX;
-        if (relX < 8) {
-          return { noteIndex: i, type: 'resize-left' };
-        } else if (relX > noteW - 8) {
-          return { noteIndex: i, type: 'resize-right' };
-        }
-        return { noteIndex: i, type: 'move' };
-      }
-    }
-    return null;
-  }, [track.notes, scrollX, tickWidth, getGridPosition]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -246,15 +251,24 @@ export function PianoRoll() {
     const hitResult = getNoteAtPosition(x, y);
     
     if (hitResult) {
-      selectNote(hitResult.noteIndex);
+      // Multi-select with shift
+      if (e.shiftKey && !selectedNotes.includes(hitResult.noteIndex)) {
+        selectNote(hitResult.noteIndex);
+      } else if (!e.shiftKey && !selectedNotes.includes(hitResult.noteIndex)) {
+        selectNote(hitResult.noteIndex);
+      }
+      
       const note = track.notes[hitResult.noteIndex];
       setDragState({
         type: hitResult.type,
         noteIndex: hitResult.noteIndex,
         startX: e.clientX,
+        startY: e.clientY,
         startTick: Math.round((x - PIANO_KEY_WIDTH + scrollX) / tickWidth),
+        startPitch: note.pitch,
         originalStart: note.start,
-        originalDuration: note.duration
+        originalDuration: note.duration,
+        originalVelocity: note.velocity
       });
     } else if (x > PIANO_KEY_WIDTH) {
       clearSelection();
@@ -269,7 +283,6 @@ export function PianoRoll() {
     const y = e.clientY - rect.top;
     setMousePos({ x, y });
     
-    // Update cursor
     const hitResult = getNoteAtPosition(x, y);
     const canvas = canvasRef.current;
     if (canvas) {
@@ -286,20 +299,25 @@ export function PianoRoll() {
       }
     }
     
-    // Handle dragging
     if (dragState.type && dragState.noteIndex >= 0) {
       const deltaX = e.clientX - dragState.startX;
+      const deltaY = e.clientY - dragState.startY;
       const deltaTick = Math.round(deltaX / tickWidth);
       
       if (dragState.type === 'move') {
-        const newStart = Math.max(0, dragState.originalStart + deltaTick);
-        updateNote(currentTrackIndex, dragState.noteIndex, { start: newStart });
+        const newStart = Math.max(0, snapToGrid(dragState.originalStart + deltaTick));
+        const deltaPitch = -Math.round(deltaY / NOTE_HEIGHT);
+        const newPitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH, dragState.startPitch + deltaPitch));
+        updateNote(currentTrackIndex, dragState.noteIndex, { 
+          start: newStart,
+          pitch: newPitch
+        });
       } else if (dragState.type === 'resize-left') {
         const newStart = Math.max(0, dragState.originalStart + deltaTick);
         const newDuration = dragState.originalDuration - deltaTick;
         if (newDuration > 10) {
           updateNote(currentTrackIndex, dragState.noteIndex, { 
-            start: newStart, 
+            start: snapToGrid(newStart), 
             duration: newDuration 
           });
         }
@@ -308,11 +326,10 @@ export function PianoRoll() {
         updateNote(currentTrackIndex, dragState.noteIndex, { duration: newDuration });
       }
     }
-  }, [dragState, tickWidth, scrollX, getNoteAtPosition, updateNote, currentTrackIndex]);
+  }, [dragState, tickWidth, scrollX, getNoteAtPosition, updateNote, currentTrackIndex, snapToGrid]);
 
   const handleMouseUp = useCallback(() => {
     if (dragState.type && dragState.noteIndex >= 0) {
-      // Sync to backend after drag
       const note = track.notes[dragState.noteIndex];
       invoke('create_note', {
         pitch: note.pitch,
@@ -321,16 +338,14 @@ export function PianoRoll() {
         duration: note.duration
       }).catch(() => {});
     }
-    setDragState({ type: null, noteIndex: -1, startX: 0, startTick: 0, originalStart: 0, originalDuration: 0 });
+    setDragState({ type: null, noteIndex: -1, startX: 0, startY: 0, startTick: 0, startPitch: 0, originalStart: 0, originalDuration: 0, originalVelocity: 100 });
   }, [dragState, track.notes]);
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     const gridPos = getGridPosition(e.clientX, e.clientY);
     if (!gridPos) return;
     
-    // Snap to grid (16th notes = 120 ticks)
-    const snapTicks = 120;
-    const start = Math.floor(gridPos.tick / snapTicks) * snapTicks;
+    const start = snapToGrid(gridPos.tick);
     
     addNote(currentTrackIndex, { 
       pitch: gridPos.pitch, 
@@ -339,7 +354,6 @@ export function PianoRoll() {
       duration: 480 
     });
     
-    // Sync to backend
     invoke('create_note', {
       pitch: gridPos.pitch,
       velocity: 100,
@@ -366,28 +380,62 @@ export function PianoRoll() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete selected notes
       if (selectedNotes.length > 0 && (e.key === 'Delete' || e.key === 'Backspace')) {
-        const { deleteNote } = useProjectStore.getState();
         selectedNotes.forEach(noteIndex => {
           deleteNote(currentTrackIndex, noteIndex);
         });
+        clearSelection();
+      }
+      
+      // Copy notes: Ctrl+C
+      if (e.code === 'KeyC' && (e.ctrlKey || e.metaKey)) {
+        const notesToCopy = selectedNotes.map(i => track.notes[i]);
+        setCopiedNotes(notesToCopy);
+      }
+      
+      // Paste notes: Ctrl+V
+      if (e.code === 'KeyV' && (e.ctrlKey || e.metaKey) && copiedNotes.length > 0) {
+        const gridPos = getGridPosition(mousePos.x + PIANO_KEY_WIDTH - scrollX, mousePos.y + HEADER_HEIGHT - scrollY);
+        if (gridPos) {
+          copiedNotes.forEach((note, i) => {
+            const offset = i === 0 ? 0 : note.start - copiedNotes[0].start;
+            addNote(currentTrackIndex, {
+              ...note,
+              start: snapToGrid(gridPos.tick + offset),
+              pitch: gridPos.pitch + (note.pitch - copiedNotes[0].pitch)
+            });
+          });
+        }
+      }
+      
+      // Select all: Ctrl+A
+      if (e.code === 'KeyA' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const allIndices = track.notes.map((_, i) => i);
+        useProjectStore.setState({ selectedNotes: allIndices });
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNotes, currentTrackIndex]);
+  }, [selectedNotes, currentTrackIndex, deleteNote, clearSelection, copiedNotes, track.notes, mousePos, scrollX, scrollY, getGridPosition, addNote, snapToGrid]);
 
   return (
     <div className="flex-1 overflow-hidden bg-gray-800 flex flex-col">
       <div className="h-6 bg-gray-700 border-b border-gray-600 flex items-center justify-between px-2">
         <span className="text-xs text-gray-400">Piano Roll - {track.name}</span>
         <div className="flex items-center gap-3 text-xs text-gray-500">
+          <button 
+            onClick={() => setSnapEnabled(!snapEnabled)}
+            className={`px-1 rounded ${snapEnabled ? 'text-green-400' : 'text-gray-500'}`}
+          >
+            Snap: {snapEnabled ? 'ON' : 'OFF'}
+          </button>
+          <span>|</span>
           <span>Zoom: {Math.round(tickWidth * 200)}%</span>
           <span>|</span>
-          <span>Scroll: Wheel | Shift+Wheel: H</span>
-          <span>|</span>
-          <span>Del: Delete Note</span>
+          <span>Ctrl+C: Copy | Ctrl+V: Paste</span>
         </div>
       </div>
       <div className="overflow-auto flex-1 relative">
