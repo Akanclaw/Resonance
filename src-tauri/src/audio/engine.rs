@@ -88,16 +88,20 @@ impl AudioEngine {
         info!("Audio playback stopped");
     }
 
-    /// Pause (legacy)
-    pub fn pause(&mut self) {
-        self.is_playing = false;
-        info!("Audio paused");
+    /// Set volume (0.0 - 2.0)
+    pub fn set_volume(&mut self, volume: f32) {
+        if let Ok(mut buf) = self.buffer.lock() {
+            buf.set_gain(volume.clamp(0.0, 2.0));
+        }
     }
 
-    /// Resume
-    pub fn resume(&mut self) {
-        self.is_playing = true;
-        info!("Audio resumed");
+    /// Get current volume
+    pub fn volume(&self) -> f32 {
+        if let Ok(buf) = self.buffer.lock() {
+            buf.gain()
+        } else {
+            1.0
+        }
     }
 
     /// Seek to specific position (in ticks)

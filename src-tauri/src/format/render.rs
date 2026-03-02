@@ -233,9 +233,6 @@ impl AudioRenderer {
         let samples_per_tick = sample_rate as f64 / (project.bpm as f64 * 480.0 / 60.0);
         let total_samples = (total_ticks as f64 * samples_per_tick) as usize;
 
-        // Create WAV header
-        let mut wav_data = Vec::new();
-
         // Generate samples (placeholder - actual synthesis would use resampler)
         let samples_per_channel = total_samples * channels as usize;
         let mut audio_buffer: Vec<f32> = Vec::with_capacity(samples_per_channel);

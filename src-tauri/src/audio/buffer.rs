@@ -6,6 +6,7 @@ pub struct AudioBuffer {
     channels: u16,
     data: VecDeque<f32>,
     max_size: usize,
+    gain: f32,
 }
 
 impl AudioBuffer {
@@ -17,6 +18,7 @@ impl AudioBuffer {
             channels,
             data: VecDeque::with_capacity(max_size),
             max_size,
+            gain: 1.0,
         }
     }
 
@@ -67,7 +69,49 @@ impl AudioBuffer {
 
     /// Read all samples as a Vec
     pub fn to_vec(&self) -> Vec<f32> {
-        self.data.iter().cloned().collect()
+        self.data.iter().map(|s| s * self.gain).collect()
+    }
+
+    /// Set the gain/volume multiplier
+    pub fn set_gain(&mut self, gain: f32) {
+        self.gain = gain.clamp(0.0, 2.0);
+    }
+
+    /// Get the current gain
+    pub fn gain(&self) -> f32 {
+        self.gain
+    }
+
+    /// Apply fade in/out
+    pub fn apply_fade(&mut self, fade_in_samples: usize, fade_out_samples: usize) {
+        let len = self.len();
+        if len == 0 {
+            return;
+        }
+
+        for i in 0..len {
+            let mut multiplier = 1.0;
+
+            // Fade in
+            if i < fade_in_samples {
+                multiplier *= i as f32 / fade_in_samples as f32;
+            }
+
+            // Fade out
+            if i > len - fade_out_samples {
+                let fade_out_pos = len - i;
+                multiplier *= fade_out_pos as f32 / fade_out_samples as f32;
+            }
+
+            // Apply to both channels
+            let idx = i * 2;
+            if idx < self.data.len() {
+                self.data[idx] *= multiplier;
+            }
+            if idx + 1 < self.data.len() {
+                self.data[idx + 1] *= multiplier;
+            }
+        }
     }
 }
 

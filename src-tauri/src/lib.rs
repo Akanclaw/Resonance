@@ -11,7 +11,7 @@ use audio::AudioEngine;
 use midi::Note;
 use format::UstxFile;
 use format::ustx::{TrackData, NoteData};
-use format::render::{RenderFormat, RenderConfig, AudioRenderer, start_render, cancel_render as cancel_render_impl, get_render_progress as get_render_progress_impl};
+use format::render::{RenderFormat, RenderConfig, AudioRenderer, start_render as start_render_impl, cancel_render as cancel_render_impl, get_render_progress as get_render_progress_impl};
 use plugin::resampler::{Resampler, builtin::WorldlineResampler};
 use std::sync::{Mutex, Arc};
 use once_cell::sync::Lazy;
@@ -208,15 +208,73 @@ fn set_loop_mode(enabled: bool, start: Option<u64>, end: Option<u64>) -> Result<
 fn get_playback_info() -> Result<String, String> {
     let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
     Ok(format!(
-        "{{\"playing\": {}, \"paused\": {}, \"position\": {}, \"rate\": {}, \"loop\": {}, \"loopStart\": {}, \"loopEnd\": {}}}",
+        "{{\"playing\": {}, \"paused\": {}, \"position\": {}, \"rate\": {}, \"loop\": {}, \"loopStart\": {}, \"loopEnd\": {}, \"volume\": {}}}",
         engine.is_playing(),
         engine.is_paused(),
         engine.position(),
         engine.playback_rate(),
         engine.is_loop_enabled(),
         engine.loop_start(),
-        engine.loop_end()
+        engine.loop_end(),
+        engine.volume()
     ))
+}
+
+// ============================================================================
+// Volume Control Commands
+// ============================================================================
+
+/// Set volume (0.0 - 2.0, default 1.0)
+#[tauri::command]
+fn set_volume(volume: f32) -> Result<String, String> {
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    engine.set_volume(volume);
+    Ok(format!("Volume set to {:.1}", volume))
+}
+
+/// Get current volume
+#[tauri::command]
+fn get_volume() -> Result<f32, String> {
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    Ok(engine.volume())
+}
+
+/// Apply fade in to audio buffer
+#[tauri::command]
+fn apply_fade_in(duration_ms: u32) -> Result<String, String> {
+    let sample_rate = {
+        let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+        engine.sample_rate()
+    };
+    
+    // Convert ms to samples
+    let fade_samples = (sample_rate as f32 * duration_ms as f32 / 1000.0) as usize;
+    
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    if let Ok(mut buf) = engine.buffer().lock() {
+        buf.apply_fade(fade_samples, 0);
+    }
+    
+    Ok(format!("Fade in applied: {}ms", duration_ms))
+}
+
+/// Apply fade out to audio buffer
+#[tauri::command]
+fn apply_fade_out(duration_ms: u32) -> Result<String, String> {
+    let sample_rate = {
+        let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+        engine.sample_rate()
+    };
+    
+    // Convert ms to samples
+    let fade_samples = (sample_rate as f32 * duration_ms as f32 / 1000.0) as usize;
+    
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    if let Ok(mut buf) = engine.buffer().lock() {
+        buf.apply_fade(0, fade_samples);
+    }
+    
+    Ok(format!("Fade out applied: {}ms", duration_ms))
 }
 
 // ============================================================================
@@ -243,7 +301,7 @@ fn start_render(
     
     let path = std::path::Path::new(&output_path);
     
-    start_render(&project, path, fmt, sample_rate, bit_depth)
+    start_render_impl(&project, path, fmt, sample_rate, bit_depth)
         .map_err(|e| e.to_string())?;
     
     Ok(format!("Rendered to {}", output_path))
@@ -343,6 +401,11 @@ pub fn run() {
             get_current_position,
             set_loop_mode,
             get_playback_info,
+            // Volume control
+            set_volume,
+            get_volume,
+            apply_fade_in,
+            apply_fade_out,
             // Render commands
             start_render,
             cancel_render,
