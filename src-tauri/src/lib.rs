@@ -79,6 +79,60 @@ fn stop_audio() -> Result<String, String> {
     Ok("Stopped".to_string())
 }
 
+/// Get audio buffer as samples (for Web Audio API playback)
+#[tauri::command]
+fn get_audio_samples() -> Result<Vec<f32>, String> {
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    Ok(engine.get_samples())
+}
+
+/// Get audio buffer length
+#[tauri::command]
+fn get_audio_buffer_len() -> Result<usize, String> {
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    Ok(engine.buffer_len())
+}
+
+/// Generate and render project to audio buffer
+#[tauri::command]
+fn render_project(project: UstxFile) -> Result<usize, String> {
+    info!("Rendering project: {}", project.name);
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    
+    // Clear existing buffer
+    engine.clear_buffer();
+    
+    // Generate audio from project notes
+    let sample_rate = engine.sample_rate() as f32;
+    let resampler = WorldlineResampler::new(sample_rate as u32);
+    
+    for track in &project.tracks {
+        for note in &track.notes {
+            // Convert pitch to note name (simplified)
+            let note_names = ["c", "d", "e", "f", "g", "a", "b"];
+            let octave = (note.pitch / 12) - 1;
+            let note_idx = note.pitch % 12;
+            let note_name = format!("{}{}", note_names[(note_idx as usize) % 7], octave);
+            
+            // Resample note
+            let buffer = resampler.resample(&note_name, note.pitch as u8, note.velocity as u8, note.duration);
+            
+            // Add to audio buffer
+            for chunk in buffer.to_vec().chunks(2) {
+                if chunk.len() == 2 {
+                    engine.add_samples(chunk[0], chunk[1]);
+                } else if chunk.len() == 1 {
+                    engine.add_sample(chunk[0]);
+                }
+            }
+        }
+    }
+    
+    let len = engine.buffer_len();
+    info!("Rendered {} samples", len);
+    Ok(len)
+}
+
 /// Get audio engine status
 #[tauri::command]
 fn get_audio_status() -> Result<String, String> {
@@ -143,6 +197,9 @@ pub fn run() {
             create_audio_engine,
             play_audio,
             stop_audio,
+            get_audio_samples,
+            get_audio_buffer_len,
+            render_project,
             get_audio_status,
             get_project_info,
             create_note,

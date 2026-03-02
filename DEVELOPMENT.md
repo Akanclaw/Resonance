@@ -38,12 +38,13 @@ https://github.com/Akanclaw/Resonance
 - [x] USTX → MIDI 导出
 
 ### Phase 4: 钢琴卷帘 UI
-- [ ] Canvas/WebGL 渲染
-- [ ] 音符编辑交互
-- [ ] 缩放/滚动
+- [x] Canvas/WebGL 渲染
+- [x] 音符编辑交互（拖拽、调整大小、双击添加）
+- [x] 缩放/滚动
+- [x] Timeline 时间轴
 
 ### Phase 5: 播放控制 & 渲染
-- [ ] 音频播放 (rodio/cpal)
+- [ ] 音频播放 (rodio)
 - [ ] 实时预览
 - [ ] 渲染管线
 
