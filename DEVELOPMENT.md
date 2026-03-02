@@ -62,11 +62,15 @@ https://github.com/Akanclaw/Resonance
 ## 更新日志
 
 ### 2026-03-02
-- 添加日志系统 (tracing)
-- 添加 rodio 和 midly 依赖
-- 改进音频引擎日志输出
+- ✅ Rust 编译通过
+- ✅ 添加日志系统 (tracing)
+- ✅ 添加 rodio 和 midly 依赖
+- ✅ 安装 ALSA 开发库
+- ✅ 修复 Tauri 命令参数
+- ✅ 修复 TypeScript 前端构建
+- ✅ 前端编译成功
 
 ### 2026-03-01
-- 初始化项目，Tauri + React + TypeScript 骨架搭建
-- 配置 tauri.conf.json (窗口大小、devtools)
-- 推送到 GitHub
+- ✅ 初始化项目，Tauri + React + TypeScript 骨架搭建
+- ✅ 配置 tauri.conf.json (窗口大小、devtools)
+- ✅ 推送到 GitHub
