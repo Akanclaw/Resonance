@@ -51,13 +51,9 @@ https://github.com/Akanclaw/Resonance
 - [ ] 实时预览
 
 ### Phase 6: Resampler 接口
-- [ ] Resampler trait 定义
-- [ ] 内置 WORLDLINE
-- [ ] 外部 resampler 支持
-
-### Phase 6: Resampler 接口
-- [ ] Resampler trait 定义
-- [ ] 内置 WORLDLINE
+- [x] Resampler trait 定义
+- [x] 内置 Sine/Triangle/Sawtooth resampler
+- [x] WORLDLINE placeholder
 - [ ] 外部 resampler 支持
 
 ### Phase 7: Phonemizer 插件

@@ -97,7 +97,7 @@ fn get_audio_buffer_len() -> Result<usize, String> {
 #[tauri::command]
 fn render_project(project: UstxFile) -> Result<usize, String> {
     info!("Rendering project: {}", project.name);
-    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
     
     // Clear existing buffer
     engine.clear_buffer();
