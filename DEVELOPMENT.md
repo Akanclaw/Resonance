@@ -28,14 +28,14 @@ https://github.com/Akanclaw/Resonance
 - [ ] 配置 CI/CD
 
 ### Phase 2: USTX 格式解析
-- [ ] 设计数据结构
-- [ ] 实现 serde 序列化/反序列化
-- [ ] 单元测试
+- [x] 设计数据结构
+- [x] 实现 serde 序列化/反序列化
+- [x] 单元测试
 
 ### Phase 3: MIDI 导入/导出
-- [ ] 集成 midly crate
-- [ ] MIDI → USTX 转换
-- [ ] USTX → MIDI 导出
+- [x] 集成 midly crate
+- [x] MIDI → USTX 转换
+- [x] USTX → MIDI 导出
 
 ### Phase 4: 钢琴卷帘 UI
 - [ ] Canvas/WebGL 渲染
