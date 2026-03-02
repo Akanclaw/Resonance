@@ -5,6 +5,8 @@ export { NoteProperties } from './NoteProperties';
 export { Timeline } from './Timeline';
 export { Presets } from './Presets';
 export { StatusBar } from './StatusBar';
+export { TransportBar } from './TransportBar';
+export { AudioPlayer } from './AudioPlayer';
 export { QuantizeSelector } from './QuantizeSelector';
 export { NoteLengthSelector } from './NoteLengthSelector';
 export { OctaveShift } from './OctaveShift';
