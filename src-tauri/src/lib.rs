@@ -15,8 +15,27 @@ use format::ustx::{TrackData, NoteData};
 use plugin::resampler::{Resampler, builtin::WorldlineResampler};
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
+use tracing::{info, error, Level};
+use tracing_subscriber::FmtSubscriber;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
 
-static AUDIO_ENGINE: Lazy<Mutex<AudioEngine>> = Lazy::new(|| Mutex::new(AudioEngine::new()));
+static AUDIO_ENGINE: Lazy<Mutex<AudioEngine>> = Lazy::new(|| {
+    // Initialize logging
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .with_target(false)
+        .with_thread_ids(false)
+        .with_file(true)
+        .with_line_number(true)
+        .finish();
+    
+    if tracing::subscriber::set_global_default(subscriber).is_err() {
+        eprintln!("Logger already initialized");
+    }
+    
+    info!("Resonance audio engine initializing...");
+    Mutex::new(AudioEngine::new())
+});
 
 // Global clipboard for note operations
 static mut NOTE_CLIPBOARD: Lazy<Mutex<NoteClipboard>> = Lazy::new(|| Mutex::new(NoteClipboard::default()));
@@ -24,16 +43,23 @@ static mut NOTE_CLIPBOARD: Lazy<Mutex<NoteClipboard>> = Lazy::new(|| Mutex::new(
 /// Initialize the audio engine
 #[tauri::command]
 fn create_audio_engine(sample_rate: u32, channels: u16) -> Result<String, String> {
-    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    info!("Creating audio engine: {}Hz, {} channels", sample_rate, channels);
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| {
+        error!("Failed to lock audio engine: {}", e);
+        e.to_string()
+    })?;
     *engine = AudioEngine::with_settings(sample_rate, channels);
+    info!("Audio engine created successfully");
     Ok(format!("Audio engine created: {}Hz, {} channels", sample_rate, channels))
 }
 
 /// Play audio (generates test tone)
 #[tauri::command]
 fn play_audio() -> Result<String, String> {
+    info!("Play audio command received");
     let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
     
+    // Use Worldline resampler to generate test tone
     let resampler = WorldlineResampler::new(44100);
     let buffer = resampler.resample("a", 60, 100, 960);
     
@@ -45,14 +71,17 @@ fn play_audio() -> Result<String, String> {
     }
     
     engine.play();
+    info!("Audio playback started");
     Ok("Playing".to_string())
 }
 
 /// Stop audio
 #[tauri::command]
 fn stop_audio() -> Result<String, String> {
+    info!("Stop audio command received");
     let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
     engine.stop();
+    info!("Audio playback stopped");
     Ok("Stopped".to_string())
 }
 
@@ -78,14 +107,17 @@ fn get_project_info(project: UstxFile) -> Result<String, String> {
 #[tauri::command]
 fn create_note(pitch: u8, velocity: u8, start: u64, duration: u64) -> Result<String, String> {
     let note = Note::new(pitch, velocity, start, duration);
+    info!("Created note: {} at {} for {} ticks", note.name(), start, duration);
     Ok(format!("Created note: {} at {} for {} ticks", note.name(), start, duration))
 }
 
 /// Test resampler
 #[tauri::command]
 fn test_resampler() -> Result<String, String> {
+    info!("Testing resampler");
     let resampler = WorldlineResampler::new(44100);
     let buffer = resampler.resample("a", 60, 100, 480);
+    info!("Resampler generated {} samples", buffer.len());
     Ok(format!("Resampler generated {} samples", buffer.len()))
 }
 
@@ -337,6 +369,20 @@ fn quantize_track_notes(track: &mut NoteTrack, grid: u64) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize logging
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .with_target(false)
+        .with_thread_ids(false)
+        .with_file(true)
+        .with_line_number(true)
+        .finish();
+    
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Failed to set tracing subscriber");
+    
+    info!("Resonance v{} starting...", env!("CARGO_PKG_VERSION"));
+    
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())

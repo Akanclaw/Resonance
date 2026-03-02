@@ -18,9 +18,9 @@ https://github.com/Akanclaw/Resonance
 ### Phase 1: 项目骨架 & 基础设施
 - [x] 初始化 Tauri + React 项目
 - [x] 配置 Tailwind CSS
-- [ ] 添加日志系统 (tracing + log)
-- [ ] 音频引擎基础架构
-- [ ] 项目结构规划
+- [x] 添加日志系统 (tracing)
+- [x] 音频引擎基础架构
+- [x] 项目结构规划
 
 **待办:**
 - [ ] 添加核心 Rust crates (audio, midi, format)
@@ -60,6 +60,11 @@ https://github.com/Akanclaw/Resonance
 ---
 
 ## 更新日志
+
+### 2026-03-02
+- 添加日志系统 (tracing)
+- 添加 rodio 和 midly 依赖
+- 改进音频引擎日志输出
 
 ### 2026-03-01
 - 初始化项目，Tauri + React + TypeScript 骨架搭建
