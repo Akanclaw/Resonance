@@ -1,13 +1,21 @@
 use std::sync::{Arc, Mutex};
+use std::path::Path;
 use crate::audio::buffer::AudioBuffer;
+use crate::format::UstxFile;
+use crate::format::render::{RenderFormat, RenderConfig};
 
-/// Audio engine for synthesis
+/// Audio engine for synthesis with advanced playback control
 pub struct AudioEngine {
     sample_rate: u32,
     channels: u16,
     buffer: Arc<Mutex<AudioBuffer>>,
     is_playing: bool,
+    is_paused: bool,
     current_position: u64,
+    playback_rate: f32,
+    loop_enabled: bool,
+    loop_start: u64,
+    loop_end: u64,
 }
 
 impl AudioEngine {
@@ -18,7 +26,12 @@ impl AudioEngine {
             channels: 2,
             buffer: Arc::new(Mutex::new(AudioBuffer::new(44100, 2))),
             is_playing: false,
+            is_paused: false,
             current_position: 0,
+            playback_rate: 1.0,
+            loop_enabled: false,
+            loop_start: 0,
+            loop_end: u64::MAX,
         }
     }
 
@@ -29,19 +42,90 @@ impl AudioEngine {
             channels,
             buffer: Arc::new(Mutex::new(AudioBuffer::new(sample_rate, channels))),
             is_playing: false,
+            is_paused: false,
             current_position: 0,
+            playback_rate: 1.0,
+            loop_enabled: false,
+            loop_start: 0,
+            loop_end: u64::MAX,
         }
     }
 
     /// Play
     pub fn play(&mut self) {
         self.is_playing = true;
+        self.is_paused = false;
+    }
+
+    /// Pause playback
+    pub fn pause(&mut self) {
+        if self.is_playing {
+            self.is_paused = true;
+        }
+    }
+
+    /// Resume from pause
+    pub fn resume(&mut self) {
+        if self.is_paused {
+            self.is_paused = false;
+        }
+    }
+
+    /// Check if paused
+    pub fn is_paused(&self) -> bool {
+        self.is_paused
     }
 
     /// Stop
     pub fn stop(&mut self) {
         self.is_playing = false;
+        self.is_paused = false;
         self.current_position = 0;
+    }
+
+    /// Seek to specific position (in ticks)
+    pub fn seek_to(&mut self, position: u64) {
+        self.current_position = position;
+        // Clear buffer on seek for clean playback
+        if let Ok(mut buf) = self.buffer.lock() {
+            buf.clear();
+        }
+    }
+
+    /// Set playback rate (0.5 - 2.0)
+    pub fn set_playback_rate(&mut self, rate: f32) {
+        self.playback_rate = rate.clamp(0.5, 2.0);
+    }
+
+    /// Get playback rate
+    pub fn playback_rate(&self) -> f32 {
+        self.playback_rate
+    }
+
+    /// Enable/disable loop mode
+    pub fn set_loop_enabled(&mut self, enabled: bool) {
+        self.loop_enabled = enabled;
+    }
+
+    /// Check if loop is enabled
+    pub fn is_loop_enabled(&self) -> bool {
+        self.loop_enabled
+    }
+
+    /// Set loop region
+    pub fn set_loop_region(&mut self, start: u64, end: u64) {
+        self.loop_start = start;
+        self.loop_end = end;
+    }
+
+    /// Get loop start position
+    pub fn loop_start(&self) -> u64 {
+        self.loop_start
+    }
+
+    /// Get loop end position
+    pub fn loop_end(&self) -> u64 {
+        self.loop_end
     }
 
     /// Check if playing

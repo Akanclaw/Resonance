@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { useProjectStore, Project } from '../store/projectStore';
+import { useProjectStore } from '../store/projectStore';
+import type { Project } from '../types';
 import { Presets } from './Presets';
 import { QuantizeSelector } from './QuantizeSelector';
 import { NoteLengthSelector } from './NoteLengthSelector';

@@ -19,6 +19,8 @@ interface DragState {
 
 export function PianoRoll() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const minimapRef = useRef<HTMLCanvasElement>(null);
   const { 
     project, 
     currentTrackIndex, 
@@ -43,10 +45,72 @@ export function PianoRoll() {
     originalDuration: 0
   });
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [autoScroll, setAutoScroll] = useState(true);
 
   // Calculate total width and height
   const totalTicks = Math.max(4000, ...track.notes.map(n => n.start + n.duration));
   const totalHeight = (MAX_PITCH - MIN_PITCH + 1) * NOTE_HEIGHT + HEADER_HEIGHT;
+
+  // Auto-scroll to follow playhead during playback
+  useEffect(() => {
+    if (isPlaying && autoScroll && canvasRef.current) {
+      const playheadX = PIANO_KEY_WIDTH + currentTick * tickWidth;
+      const containerWidth = containerRef.current?.clientWidth || 800;
+      const currentScroll = scrollX;
+      
+      // If playhead is near the right edge, scroll to keep it visible
+      if (playheadX > currentScroll + containerWidth - 100) {
+        setScrollX(Math.max(0, playheadX - 100));
+      }
+    }
+  }, [currentTick, isPlaying, autoScroll, tickWidth, scrollX]);
+
+  // Render minimap
+  const renderMinimap = useCallback(() => {
+    const canvas = minimapRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const width = canvas.width;
+    const height = canvas.height;
+    
+    // Clear
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Calculate scale
+    const scaleX = width / totalTicks;
+    const scaleY = height / (MAX_PITCH - MIN_PITCH + 1);
+    
+    // Draw notes as small rectangles
+    const color = track.color || '#3b82f6';
+    track.notes.forEach(note => {
+      const x = note.start * scaleX;
+      const y = (MAX_PITCH - note.pitch - MIN_PITCH) * scaleY;
+      const w = Math.max(1, note.duration * scaleX);
+      const h = Math.max(1, NOTE_HEIGHT * scaleY - 1);
+      
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    });
+    
+    // Draw playhead position
+    const playheadX = currentTick * scaleX;
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(playheadX - 1, 0, 2, height);
+    
+    // Draw viewport rectangle
+    const viewportStart = scrollX / tickWidth * scaleX;
+    const viewportWidth = (containerRef.current?.clientWidth || 800) / tickWidth * scaleX;
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(viewportStart, 0, viewportWidth, height);
+  }, [track, totalTicks, currentTick, scrollX, tickWidth]);
+
+  useEffect(() => {
+    renderMinimap();
+  }, [renderMinimap]);
 
   // Load project info from backend
   useEffect(() => {
@@ -363,6 +427,20 @@ export function PianoRoll() {
     }
   };
 
+  // Minimap click to seek
+  const handleMinimapClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = minimapRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const x = e.clientX - rect.left;
+    const canvas = minimapRef.current;
+    if (!canvas) return;
+    
+    const tick = Math.floor((x / canvas.width) * totalTicks);
+    const { setCurrentTick } = useProjectStore.getState();
+    setCurrentTick(Math.max(0, tick));
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -383,6 +461,16 @@ export function PianoRoll() {
       <div className="h-6 bg-gray-700 border-b border-gray-600 flex items-center justify-between px-2">
         <span className="text-xs text-gray-400">Piano Roll - {track.name}</span>
         <div className="flex items-center gap-3 text-xs text-gray-500">
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoScroll}
+              onChange={(e) => setAutoScroll(e.target.checked)}
+              className="w-3 h-3"
+            />
+            <span>Auto-scroll</span>
+          </label>
+          <span>|</span>
           <span>Zoom: {Math.round(tickWidth * 200)}%</span>
           <span>|</span>
           <span>Scroll: Wheel | Shift+Wheel: H</span>
@@ -390,7 +478,20 @@ export function PianoRoll() {
           <span>Del: Delete Note</span>
         </div>
       </div>
-      <div className="overflow-auto flex-1 relative">
+      
+      {/* Minimap */}
+      <div className="h-12 bg-gray-900 border-b border-gray-700 relative">
+        <canvas
+          ref={minimapRef}
+          width={800}
+          height={48}
+          onClick={handleMinimapClick}
+          className="w-full h-full cursor-pointer"
+        />
+      </div>
+      
+      {/* Main piano roll canvas */}
+      <div ref={containerRef} className="overflow-auto flex-1 relative">
         <canvas
           ref={canvasRef}
           width={1400}

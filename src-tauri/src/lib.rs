@@ -12,8 +12,9 @@ use midi::{Note, NoteTrack, NoteClipboard, NoteClipboardItem};
 use midi::note_track;
 use format::UstxFile;
 use format::ustx::{TrackData, NoteData};
+use format::render::{RenderFormat, RenderConfig, AudioRenderer, start_render, cancel_render as cancel_render_impl, get_render_progress as get_render_progress_impl};
 use plugin::resampler::{Resampler, builtin::WorldlineResampler};
-use std::sync::Mutex;
+use std::sync::{Mutex, Arc};
 use once_cell::sync::Lazy;
 
 static AUDIO_ENGINE: Lazy<Mutex<AudioEngine>> = Lazy::new(|| Mutex::new(AudioEngine::new()));
@@ -60,7 +61,139 @@ fn stop_audio() -> Result<String, String> {
 #[tauri::command]
 fn get_audio_status() -> Result<String, String> {
     let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
-    Ok(format!("Playing: {}, Sample Rate: {}Hz", engine.is_playing(), engine.sample_rate()))
+    Ok(format!(
+        "Playing: {}, Paused: {}, Sample Rate: {}Hz, Rate: {:.1}x, Loop: {}",
+        engine.is_playing(),
+        engine.is_paused(),
+        engine.sample_rate(),
+        engine.playback_rate(),
+        engine.is_loop_enabled()
+    ))
+}
+
+// ============================================================================
+// Advanced Playback Control Commands
+// ============================================================================
+
+/// Pause audio playback
+#[tauri::command]
+fn pause_audio() -> Result<String, String> {
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    engine.pause();
+    Ok("Paused".to_string())
+}
+
+/// Resume audio playback
+#[tauri::command]
+fn resume_audio() -> Result<String, String> {
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    engine.resume();
+    Ok("Resumed".to_string())
+}
+
+/// Seek to specific position (in ticks)
+#[tauri::command]
+fn seek_audio(position: u64) -> Result<String, String> {
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    engine.seek_to(position);
+    Ok(format!("Seeked to position {}", position))
+}
+
+/// Set playback rate (0.5 - 2.0)
+#[tauri::command]
+fn set_playback_rate(rate: f32) -> Result<String, String> {
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    engine.set_playback_rate(rate);
+    Ok(format!("Playback rate set to {:.1}x", rate))
+}
+
+/// Get current playback position (in ticks)
+#[tauri::command]
+fn get_current_position() -> Result<u64, String> {
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    Ok(engine.position())
+}
+
+/// Set loop mode
+#[tauri::command]
+fn set_loop_mode(enabled: bool, start: Option<u64>, end: Option<u64>) -> Result<String, String> {
+    let mut engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    engine.set_loop_enabled(enabled);
+    if let (Some(s), Some(e)) = (start, end) {
+        engine.set_loop_region(s, e);
+    }
+    Ok(format!("Loop mode: {}, region: {}-{}", enabled, engine.loop_start(), engine.loop_end()))
+}
+
+/// Get playback info
+#[tauri::command]
+fn get_playback_info() -> Result<String, String> {
+    let engine = AUDIO_ENGINE.lock().map_err(|e| e.to_string())?;
+    Ok(format!(
+        "{{\"playing\": {}, \"paused\": {}, \"position\": {}, \"rate\": {}, \"loop\": {}, \"loopStart\": {}, \"loopEnd\": {}}}",
+        engine.is_playing(),
+        engine.is_paused(),
+        engine.position(),
+        engine.playback_rate(),
+        engine.is_loop_enabled(),
+        engine.loop_start(),
+        engine.loop_end()
+    ))
+}
+
+// ============================================================================
+// Audio Rendering Commands
+// ============================================================================
+
+/// Start rendering project to audio file
+#[tauri::command]
+fn start_render(
+    project: UstxFile,
+    output_path: String,
+    format: String,
+    sample_rate: u32,
+    bit_depth: u16,
+) -> Result<String, String> {
+    let fmt = match format.to_lowercase().as_str() {
+        "wav16" => RenderFormat::Wav16,
+        "wav24" => RenderFormat::Wav24,
+        "wav32" => RenderFormat::Wav32,
+        "mp3" => RenderFormat::Mp3,
+        "flac" => RenderFormat::Flac,
+        _ => return Err(format!("Unsupported format: {}", format)),
+    };
+    
+    let path = std::path::Path::new(&output_path);
+    
+    start_render(&project, path, fmt, sample_rate, bit_depth)
+        .map_err(|e| e.to_string())?;
+    
+    Ok(format!("Rendered to {}", output_path))
+}
+
+/// Cancel ongoing render
+#[tauri::command]
+fn cancel_render() -> Result<String, String> {
+    cancel_render_impl();
+    Ok("Render cancelled".to_string())
+}
+
+/// Get render progress (0.0 - 100.0)
+#[tauri::command]
+fn get_render_progress() -> Result<f32, String> {
+    Ok(get_render_progress_impl())
+}
+
+/// Get supported render formats
+#[tauri::command]
+fn get_render_formats() -> Result<Vec<String>, String> {
+    Ok(vec![
+        "wav16".to_string(),
+        "wav24".to_string(),
+        "wav32".to_string(),
+        "mp3".to_string(),
+        "flac".to_string(),
+    ])
 }
 
 /// Get project info
@@ -346,6 +479,20 @@ pub fn run() {
             play_audio,
             stop_audio,
             get_audio_status,
+            // Advanced playback control
+            pause_audio,
+            resume_audio,
+            seek_audio,
+            set_playback_rate,
+            get_current_position,
+            set_loop_mode,
+            get_playback_info,
+            // Render commands
+            start_render,
+            cancel_render,
+            get_render_progress,
+            get_render_formats,
+            // Project commands
             get_project_info,
             create_note,
             test_resampler,

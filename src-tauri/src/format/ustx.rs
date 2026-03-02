@@ -218,6 +218,21 @@ impl UstxFile {
         self.beat_unit = unit;
     }
 
+    /// Calculate total project duration in ticks
+    pub fn calculate_duration(&self) -> u64 {
+        let mut max_end = 0u64;
+        for track in &self.tracks {
+            for note in &track.notes {
+                let note_end = note.position.saturating_add(note.duration);
+                if note_end > max_end {
+                    max_end = note_end;
+                }
+            }
+        }
+        // Add some padding (default 480 ticks = 1 bar)
+        max_end.saturating_add(480)
+    }
+
     /// Get number of tracks
     pub fn track_count(&self) -> usize {
         self.tracks.len()
