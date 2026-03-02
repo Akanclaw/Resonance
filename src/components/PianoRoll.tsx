@@ -471,7 +471,9 @@ export function PianoRoll() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Delete selected notes
       if (selectedNotes.length > 0 && (e.key === 'Delete' || e.key === 'Backspace')) {
-        selectedNotes.forEach(noteIndex => {
+        // Sort in descending order to avoid index shifting issues
+        const indicesToDelete = [...selectedNotes].sort((a, b) => b - a);
+        indicesToDelete.forEach(noteIndex => {
           deleteNote(currentTrackIndex, noteIndex);
         });
         clearSelection();
