@@ -1,0 +1,310 @@
+//! NoteTrack - Track-based Note Management
+//!
+//! This module provides NoteTrack for managing notes on a track with
+//! add/remove/move/cut/copy/paste operations.
+
+use serde::{Deserialize, Serialize};
+use super::note::Note;
+
+/// Clipboard for note operations
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NoteClipboard {
+    /// Copied notes
+    pub notes: Vec<NoteClipboardItem>,
+    /// Source track index (for reference)
+    pub source_track: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoteClipboardItem {
+    pub pitch: u8,
+    pub velocity: u8,
+    pub start: u64,
+    pub duration: u64,
+}
+
+impl From<&Note> for NoteClipboardItem {
+    fn from(note: &Note) -> Self {
+        Self {
+            pitch: note.pitch,
+            velocity: note.velocity,
+            start: note.start,
+            duration: note.duration,
+        }
+    }
+}
+
+impl From<NoteClipboardItem> for Note {
+    fn from(item: NoteClipboardItem) -> Self {
+        Note::new(item.pitch, item.velocity, item.start, item.duration)
+    }
+}
+
+/// NoteTrack - Advanced track for note editing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoteTrack {
+    /// Track name
+    pub name: String,
+    /// Track color (ARGB)
+    pub color: Option<u32>,
+    /// Notes in the track
+    notes: Vec<Note>,
+    /// Track mute state
+    pub muted: bool,
+    /// Track solo state
+    pub solo: bool,
+    /// Track volume (0.0 - 1.0)
+    pub volume: f32,
+    /// Track pan (-1.0 to 1.0)
+    pub pan: f32,
+}
+
+impl Default for NoteTrack {
+    fn default() -> Self {
+        Self::new("New Track")
+    }
+}
+
+impl NoteTrack {
+    /// Create a new note track
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            color: None,
+            notes: Vec::new(),
+            muted: false,
+            solo: false,
+            volume: 1.0,
+            pan: 0.0,
+        }
+    }
+
+    /// Create with color
+    pub fn with_color(mut self, color: u32) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    /// Get track name
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Set track name
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.name = name.into();
+    }
+
+    /// Add a note to the track
+    /// Returns the index of the added note
+    pub fn add_note(&mut self, note: Note) -> usize {
+        let idx = self.notes.len();
+        self.notes.push(note);
+        // Keep sorted by start time
+        self.notes.sort_by_key(|n| n.start);
+        // Find the actual position after sorting
+        self.notes.iter().position(|n| n.start == self.notes[idx].start && n.duration == self.notes[idx].duration).unwrap_or(idx)
+    }
+
+    /// Add a note at specific position (unsorted, for batch operations)
+    pub fn push_note(&mut self, note: Note) {
+        self.notes.push(note);
+    }
+
+    /// Sort notes by start position
+    pub fn sort_notes(&mut self) {
+        self.notes.sort_by_key(|n| n.start);
+    }
+
+    /// Remove a note by index
+    pub fn remove_note(&mut self, index: usize) -> Option<Note> {
+        if index < self.notes.len() {
+            Some(self.notes.remove(index))
+        } else {
+            None
+        }
+    }
+
+    /// Remove notes by predicate
+    pub fn remove_notes_by<F>(&mut self, predicate: F) -> Vec<Note>
+    where
+        F: FnMut(&Note) -> bool,
+    {
+        let to_remove: Vec<_> = self.notes.iter().enumerate()
+            .filter(|(_, n)| predicate(*n))
+            .map(|(i, _)| i)
+            .collect();
+        
+        let mut removed = Vec::new();
+        for i in to_remove.into_iter().rev() {
+            if let Some(note) = self.notes.remove(i) {
+                removed.push(note);
+            }
+        }
+        removed
+    }
+
+    /// Move a note to a new position
+    /// Returns the new index of the moved note
+    pub fn move_note(&mut self, index: usize, new_start: u64, new_pitch: Option<u8>) -> Option<usize> {
+        if index >= self.notes.len() {
+            return None;
+        }
+
+        let mut note = self.notes.remove(index);
+        note.start = new_start;
+        if let Some(pitch) = new_pitch {
+            note.pitch = pitch.min(127);
+        }
+
+        // Re-insert at correct position
+        self.notes.push(note);
+        self.notes.sort_by_key(|n| n.start);
+
+        // Find and return new position
+        self.notes.iter().position(|n| n.start == new_start)
+    }
+
+    /// Duplicate notes
+    pub fn duplicate_notes(&mut self, indices: &[usize]) -> Vec<usize> {
+        let mut new_indices = Vec::new();
+        
+        for &idx in indices {
+            if idx < self.notes.len() {
+                let note = self.notes[idx].clone();
+                self.notes.push(note);
+                new_indices.push(self.notes.len() - 1);
+            }
+        }
+        
+        self.notes.sort_by_key(|n| n.start);
+        new_indices
+    }
+
+    /// Get all notes
+    pub fn notes(&self) -> &[Note] {
+        &self.notes
+    }
+
+    /// Get mutable notes
+    pub fn notes_mut(&mut self) -> &mut Vec<Note> {
+        &mut self.notes
+    }
+
+    /// Get notes in a time range
+    pub fn notes_in_range(&self, start: u64, end: u64) -> Vec<&Note> {
+        self.notes
+            .iter()
+            .filter(|n| n.start < end && n.end() > start)
+            .collect()
+    }
+
+    /// Get note at index
+    pub fn get_note(&self, index: usize) -> Option<&Note> {
+        self.notes.get(index)
+    }
+
+    /// Get note at index (mutable)
+    pub fn get_note_mut(&mut self, index: usize) -> Option<&mut Note> {
+        self.notes.get_mut(index)
+    }
+
+    /// Get the total duration of the track
+    pub fn duration(&self) -> u64 {
+        self.notes.iter().map(|n| n.end()).max().unwrap_or(0)
+    }
+
+    /// Get the number of notes
+    pub fn len(&self) -> usize {
+        self.notes.len()
+    }
+
+    /// Check if track is empty
+    pub fn is_empty(&self) -> bool {
+        self.notes.is_empty()
+    }
+
+    /// Clear all notes
+    pub fn clear(&mut self) {
+        self.notes.clear();
+    }
+
+    /// Get note count in range
+    pub fn count_in_range(&self, start: u64, end: u64) -> usize {
+        self.notes.iter()
+            .filter(|n| n.start < end && n.end() > start)
+            .count()
+    }
+
+    /// Find note at position
+    pub fn find_note_at(&self, position: u64, pitch: u8) -> Option<usize> {
+        self.notes.iter().position(|n| {
+            n.start <= position && position < n.end() && n.pitch == pitch
+        })
+    }
+
+    /// Find notes at position (can have overlaps)
+    pub fn find_notes_at(&self, position: u64) -> Vec<usize> {
+        self.notes.iter()
+            .enumerate()
+            .filter(|(_, n)| n.start <= position && position < n.end())
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// Split track at position
+    pub fn split_at(&self, position: u64) -> (Vec<&Note>, Vec<&Note>) {
+        let (left, right) = self.notes.iter().partition(|n| n.end() <= position);
+        (left, right)
+    }
+
+    /// Merge another track's notes into this one
+    pub fn merge(&mut self, other: NoteTrack, offset: u64) {
+        for note in other.notes {
+            let mut new_note = note;
+            new_note.start += offset;
+            self.notes.push(new_note);
+        }
+        self.sort_notes();
+    }
+
+    /// Transpose all notes by semitones
+    pub fn transpose(&mut self, semitones: i32) {
+        for note in &mut self.notes {
+            let new_pitch = (note.pitch as i32 + semitones).clamp(0, 127);
+            note.pitch = new_pitch as u8;
+        }
+    }
+
+    /// Quantize note positions
+    pub fn quantize(&mut self, grid: u64) {
+        for note in &mut self.notes {
+            note.start = (note.start / grid) * grid;
+        }
+    }
+
+    /// Set mute state
+    pub fn set_muted(&mut self, muted: bool) {
+        self.muted = muted;
+    }
+
+    /// Set solo state
+    pub fn set_solo(&mut self, solo: bool) {
+        self.solo = solo;
+    }
+
+    /// Set volume
+    pub fn set_volume(&mut self, volume: f32) {
+        self.volume = volume.clamp(0.0, 1.0);
+    }
+
+    /// Set pan
+    pub fn set_pan(&mut self, pan: f32) {
+        self.pan = pan.clamp(-1.0, 1.0);
+    }
+}
+
+// Re-export for convenience
+pub use super::note::Note as MidiNote;
+pub use NoteClipboard;
+pub use NoteClipboardItem;
