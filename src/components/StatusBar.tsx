@@ -1,7 +1,7 @@
 import { useProjectStore } from '../store/projectStore';
 
 export function StatusBar() {
-  const { project, currentTrackIndex, selectedNotes, isPlaying } = useProjectStore();
+  const { project, currentTrackIndex, selectedNotes, isPlaying, currentTick } = useProjectStore();
   const track = project.tracks[currentTrackIndex];
   
   const totalNotes = track.notes.length;
@@ -10,6 +10,13 @@ export function StatusBar() {
     ? Math.max(...track.notes.map(n => n.start + n.duration))
     : 0;
   const durationSec = Math.round(duration / 480 / project.bpm * 60);
+  
+  // Calculate current position in bars:beats:ticks
+  const ticksPerBeat = 480;
+  const currentBeat = Math.floor(currentTick / ticksPerBeat);
+  const currentBar = Math.floor(currentBeat / project.beatPerBar) + 1;
+  const beatInBar = (currentBeat % project.beatPerBar) + 1;
+  const ticksInBeat = currentTick % ticksPerBeat;
   
   return (
     <div className="flex items-center justify-between px-4 py-1 bg-gray-800 border-t border-gray-700 text-xs text-gray-400">
@@ -23,6 +30,10 @@ export function StatusBar() {
         <span>Duration: {durationSec}s</span>
       </div>
       <div className="flex items-center gap-4">
+        <span className="font-mono text-yellow-400">
+          {currentBar}:{beatInBar}:{ticksInBeat}
+        </span>
+        <span>Tempo: {project.tempo[0]?.bpm || 120} BPM</span>
         <span>Time: {project.beatPerBar}/{project.beatUnit}</span>
         <span>© 2026 Resonance Team</span>
       </div>
