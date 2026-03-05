@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::info;
 
 /// Phonemizer trait - converts lyrics to phonemes
 pub trait Phonemizer: Send + Sync {

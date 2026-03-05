@@ -1,6 +1,6 @@
 //! Project Validator - Comprehensive USTX file validation
 
-use crate::format::ustx::{UstxFile, TrackData, NoteData, Tempo, VibratoData};
+use crate::format::ustx::{UstxFile, TrackData, NoteData, VibratoData};
 
 /// Validation result
 #[derive(Debug, Clone, PartialEq)]
@@ -157,7 +157,7 @@ impl ProjectValidator {
     }
 
     /// Validate a single track
-    fn validate_track(&self, track: &TrackData, track_idx: usize, project: &UstxFile, result: &mut ValidationResult) {
+    fn validate_track(&self, track: &TrackData, track_idx: usize, _project: &UstxFile, result: &mut ValidationResult) {
         if track.name.is_empty() {
             result.add_error(format!("Track {} has no name", track_idx));
         }
@@ -223,7 +223,7 @@ impl ProjectValidator {
     }
 
     /// Check for overlapping notes
-    fn check_note_overlaps(&self, notes: &[NoteData], track_idx: usize, track_name: &str, result: &mut ValidationResult) {
+    fn check_note_overlaps(&self, notes: &[NoteData], _track_idx: usize, track_name: &str, result: &mut ValidationResult) {
         for i in 0..notes.len() {
             for j in (i + 1)..notes.len() {
                 let note1 = &notes[i];

@@ -5,7 +5,6 @@ use midly::Smf;
 use midly::Timing;
 use midly::TrackEventKind;
 use midly::MetaMessage;
-use midly::num::u7;
 use crate::format::ustx::{UstxFile, TrackData, NoteData, Tempo};
 
 /// Import MIDI file and convert to USTX project

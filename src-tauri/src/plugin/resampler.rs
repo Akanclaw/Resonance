@@ -1,6 +1,5 @@
 use crate::audio::buffer::AudioBuffer;
 use std::collections::HashMap;
-use std::path::Path;
 use std::process::Command;
 use tracing::{info, warn, error};
 
@@ -143,7 +142,7 @@ pub mod builtin {
             // Apply envelope (ADSR-ish)
             let attack = (samples as f32 * 0.05) as usize;
             let decay = (samples as f32 * 0.1) as usize;
-            let sustain = samples - attack - decay;
+            let _sustain = samples - attack - decay;
 
             for i in 0..samples {
                 let t = i as f64 / self.sample_rate as f64;

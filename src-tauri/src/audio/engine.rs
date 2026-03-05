@@ -1,10 +1,6 @@
 use std::sync::{Arc, Mutex};
-use std::path::Path;
-use std::time::Duration;
 use crate::audio::buffer::AudioBuffer;
-use crate::format::UstxFile;
-use crate::format::render::{RenderFormat, RenderConfig};
-use tracing::{info, error};
+use tracing::info;
 
 /// Audio engine for synthesis with advanced playback control
 pub struct AudioEngine {

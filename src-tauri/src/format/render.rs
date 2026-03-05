@@ -221,7 +221,7 @@ impl AudioRenderer {
         use std::io::BufWriter;
 
         let file = File::create(output_path)?;
-        let writer = BufWriter::new(file);
+        let _writer = BufWriter::new(file);
 
         // Generate audio data (simplified - just renders silence for now)
         let sample_rate = self.config.sample_rate;
@@ -377,7 +377,7 @@ pub fn start_render(
 
 /// Cancel ongoing render
 pub fn cancel_render() {
-    if let Ok(mut guard) = RENDERER.lock() {
+    if let Ok(guard) = RENDERER.lock() {
         if let Some(r) = guard.as_ref() {
             r.cancel();
         }
