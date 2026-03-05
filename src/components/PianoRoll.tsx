@@ -158,7 +158,7 @@ export function PianoRoll() {
   }, [scrollX, tickWidth]);
 
   // Find note at position
-  const getNoteAtPosition = useCallback((x: number, y: number): { noteIndex: number; type: 'move' | 'resize-left' | 'resize-right' | 'velocity' } | null => {
+  const getNoteAtPosition = useCallback((x: number, y: number): { noteIndex: number; type: 'move' | 'resize-left' | 'resize-right' } | null => {
     const gridPos = getGridPosition(x, y);
     if (!gridPos) return null;
     
